@@ -33,5 +33,15 @@ export default defineConfig({
         secure: false
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'element-plus': ['element-plus', '@element-plus/icons-vue'],
+          'markdown-runtime': ['markdown-it', 'katex', 'highlight.js']
+        }
+      }
+    }
   }
 })

@@ -1,1 +1,1041 @@
 @import "tailwindcss";
+
+:root {
+  /* ==========================================================================
+     Element Plus Official Theme Tokens (https://element-plus.org/zh-CN/guide/theming)
+     ========================================================================== */
+  --el-color-primary: #2563eb;
+  --el-color-primary-rgb: 37, 99, 235;
+  --el-color-primary-light-3: #60a5fa;
+  --el-color-primary-light-5: #93c5fd;
+  --el-color-primary-light-7: #bfdbfe;
+  --el-color-primary-light-8: #dbeafe;
+  --el-color-primary-light-9: #eff6ff;
+  --el-color-primary-dark-2: #1d4ed8;
+
+  --el-color-success: #10b981;
+  --el-color-warning: #f59e0b;
+  --el-color-danger: #ef4444;
+  --el-color-error: #ef4444;
+  --el-color-info: #64748b;
+
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 20px;
+  --el-border-radius-circle: 100%;
+
+  --el-border-color: #e2e8f0;
+  --el-border-color-light: #f1f5f9;
+  --el-border-color-lighter: #f8fafc;
+  --el-border-color-extra-light: #f8fafc;
+  --el-border-color-dark: #cbd5e1;
+  --el-border-color-darker: #94a3b8;
+
+  --el-fill-color: #f1f5f9;
+  --el-fill-color-light: #f8fafc;
+  --el-fill-color-lighter: #fafafa;
+  --el-fill-color-extra-light: #fcfcfc;
+  --el-fill-color-dark: #e2e8f0;
+  --el-fill-color-darker: #cbd5e1;
+  --el-fill-color-blank: #ffffff;
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f8fafc;
+  --el-bg-color-overlay: #ffffff;
+
+  --el-text-color-primary: #0f172a;
+  --el-text-color-regular: #334155;
+  --el-text-color-secondary: #64748b;
+  --el-text-color-placeholder: #94a3b8;
+  --el-text-color-disabled: #cbd5e1;
+  --el-font-size-base: 13px;
+
+  --el-dialog-bg-color: #ffffff;
+  --el-dialog-border-radius: 12px;
+  --el-dialog-padding-primary: 20px;
+
+  --el-button-font-weight: 600;
+  --el-button-border-radius: 6px;
+  --el-input-border-radius: 6px;
+  --el-select-border-radius: 6px;
+  --el-input-hover-border-color: #93c5fd;
+  --el-input-focus-border-color: #2563eb;
+  --el-select-input-focus-border-color: #2563eb;
+
+  /* Custom project tokens */
+  --wf-radius-sm: 4px;
+  --wf-radius-control: 6px;
+  --wf-radius-card: 8px;
+  --wf-border: #e2e8f0;
+  --wf-focus: #2563eb;
+  --wf-text-muted: #64748b;
+}
+
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+select:focus,
+select:focus-visible,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
+   Global Interactive Cursors (Pointer & Disabled States)
+   ========================================================================== */
+button,
+[role="button"],
+.el-button,
+.el-dropdown,
+.el-dropdown-link,
+.el-dropdown-menu__item,
+.el-checkbox,
+.el-radio,
+.el-radio-button,
+.el-switch,
+summary,
+a {
+  cursor: pointer;
+}
+
+button:disabled,
+button[disabled],
+.el-button.is-disabled,
+.is-disabled {
+  cursor: not-allowed !important;
+}
+
+/* ==========================================================================
+   Design Tokens & Animations (6px controls / 10px panels)
+   ========================================================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes zoomIn50 {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInFromTop1 {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInFromTop3 {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInFromBottom2 {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInFromBottom5 {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInFromRight1 {
+  from { opacity: 0; transform: translateX(6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Animation utilities */
+.animate-in {
+  animation-duration: var(--animation-duration, 0.25s);
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.fade-in { animation-name: fadeIn; }
+.zoom-in { animation-name: zoomIn; }
+.zoom-in-50 { animation-name: zoomIn50; }
+.slide-in-from-top-1 { animation-name: slideInFromTop1; }
+.slide-in-from-top-3 { animation-name: slideInFromTop3; }
+.slide-in-from-bottom-2 { animation-name: slideInFromBottom2; }
+.slide-in-from-bottom-5 { animation-name: slideInFromBottom5; }
+.slide-in-from-right-1 { animation-name: slideInFromRight1; }
+.animate-spin-slow { animation: spinSlow 3s linear infinite; }
+
+.duration-300 { --animation-duration: 0.3s; }
+.duration-500 { --animation-duration: 0.5s; }
+.duration-700 { --animation-duration: 0.7s; }
+
+/* ==========================================================================
+   Custom Scrollbar
+   ========================================================================== */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(203, 213, 225, 0.6);
+  border-radius: 4px;
+}
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.9);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* ==========================================================================
+   Element Plus Popover & Dropdown (Standard 4px Radius)
+   ========================================================================== */
+/* Premium Model Dropdown (Standard 4px / Clean Menu) */
+.el-popper__arrow {
+  display: none !important;
+}
+
+.premium-model-menu.el-dropdown-menu {
+  border-radius: 6px !important;
+  padding: 4px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.12) !important;
+  background: #ffffff !important;
+}
+
+.premium-model-menu .el-dropdown-menu__item {
+  border-radius: 4px !important;
+  margin-bottom: 1px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+}
+
+.premium-model-menu .el-dropdown-menu__item:hover {
+  background-color: #f1f5f9 !important;
+  color: #2563eb !important;
+}
+
+.premium-model-menu .el-dropdown-menu__item.is-active {
+  background-color: #eff6ff !important;
+  color: #2563eb !important;
+  font-weight: 600 !important;
+}
+
+/* ==========================================================================
+   Enterprise Drawer & Slide-over Styling
+   ========================================================================== */
+.el-drawer {
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.18) !important;
+  background: #ffffff !important;
+  border-left: 1px solid #e2e8f0 !important;
+}
+
+.el-drawer__header {
+  padding: 16px 20px 14px 20px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.el-drawer__title {
+  font-size: 14.5px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+}
+
+.el-drawer__close-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #64748b !important;
+  transition: all 0.15s ease !important;
+}
+
+.el-drawer__close-btn:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.el-drawer__body {
+  padding: 16px 20px !important;
+}
+.el-dialog,
+.wenflow-unified-dialog.el-dialog,
+.enterprise-settings-dialog.el-dialog {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.22), 0 0 1px 1px rgba(15, 23, 42, 0.06) !important;
+  border: 1px solid #e2e8f0 !important;
+  background-color: #ffffff !important;
+  padding: 0 !important; /* Removes outer inset margin, allowing edge-to-edge header & footer */
+}
+
+.el-dialog__header {
+  padding: 16px 24px 14px 24px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  background-color: #ffffff !important;
+}
+
+.el-dialog__headerbtn {
+  top: 14px !important;
+  right: 16px !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.el-dialog__headerbtn:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.el-dialog__headerbtn .el-dialog__close {
+  color: #64748b !important;
+  font-size: 15px !important;
+}
+
+.el-dialog__headerbtn:hover .el-dialog__close {
+  color: #0f172a !important;
+}
+
+.el-dialog__body {
+  padding: 20px 24px !important;
+  margin: 0 !important;
+  background-color: #ffffff !important;
+}
+
+.el-dialog__footer {
+  padding: 14px 24px !important;
+  margin: 0 !important;
+  border-top: 1px solid #f1f5f9 !important;
+  background-color: #f8fafc !important;
+}
+
+/* ==========================================================================
+   Enterprise Confirmation Dialog (Linear / Vercel Aesthetic)
+   ========================================================================== */
+.el-message-box,
+.enterprise-confirm-box.el-message-box {
+  width: 380px !important;
+  max-width: 90vw !important;
+  border-radius: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.18), 0 0 1px 1px rgba(15, 23, 42, 0.05) !important;
+  padding: 18px 20px 16px 20px !important;
+  background-color: #ffffff !important;
+  vertical-align: middle !important;
+}
+
+.el-message-box__header {
+  padding: 0 0 10px 0 !important;
+  position: relative !important;
+}
+
+.el-message-box__title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1.3 !important;
+}
+
+.el-message-box__headerbtn {
+  top: -2px !important;
+  right: -2px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s ease !important;
+}
+
+.el-message-box__headerbtn:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.el-message-box__headerbtn .el-message-box__close {
+  color: #94a3b8 !important;
+  font-size: 14px !important;
+}
+
+.el-message-box__headerbtn:hover .el-message-box__close {
+  color: #334155 !important;
+}
+
+.el-message-box__content {
+  padding: 4px 0 16px 0 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+}
+
+.el-message-box__status {
+  position: static !important;
+  transform: none !important;
+  margin-right: 0 !important;
+  font-size: 18px !important;
+  margin-top: 1px !important;
+}
+
+.el-message-box__status.el-icon {
+  color: #f59e0b !important;
+}
+
+.el-message-box__message {
+  padding-left: 0 !important;
+  font-size: 13px !important;
+  color: #475569 !important;
+  line-height: 1.55 !important;
+  word-break: break-word !important;
+}
+
+.el-message-box__btns {
+  padding: 12px 0 0 0 !important;
+  border-top: 1px solid #f1f5f9 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+}
+
+.el-message-box__btns .el-button {
+  height: 32px !important;
+  padding: 0 14px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  margin-left: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+/* Danger action button (Confirm Delete) */
+.el-message-box__btns .el-button--danger,
+.el-button--danger {
+  --el-button-bg-color: #ef4444 !important;
+  --el-button-border-color: #ef4444 !important;
+  --el-button-hover-bg-color: #dc2626 !important;
+  --el-button-hover-border-color: #dc2626 !important;
+  --el-button-active-bg-color: #b91c1c !important;
+  --el-button-active-border-color: #b91c1c !important;
+  background-color: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 2px 0 rgba(239, 68, 68, 0.2) !important;
+}
+
+.el-message-box__btns .el-button--danger:hover {
+  background-color: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
+
+.el-message-box__btns .el-button--default {
+  border-color: #e2e8f0 !important;
+  background-color: #ffffff !important;
+  color: #475569 !important;
+}
+
+.el-message-box__btns .el-button--default:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* ==========================================================================
+   Ultra-Modern Linear / Sonner Toast Notification System (ElMessage Overhaul)
+   ========================================================================== */
+.el-message,
+.enterprise-modern-toast.el-message {
+  min-width: auto !important;
+  max-width: min(560px, 92vw) !important;
+  min-height: 40px !important;
+  height: auto !important;
+  padding: 8px 16px 8px 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow: 0 14px 32px -6px rgba(15, 23, 42, 0.16), 0 0 1px 1px rgba(15, 23, 42, 0.04) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  z-index: 99999 !important;
+  margin-top: 10px !important;
+}
+
+.el-message .el-message__content {
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  color: #1e293b !important;
+  line-height: 1.5 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  padding: 0 !important;
+}
+
+.el-message ::selection {
+  background: #dbeafe !important;
+  color: #1e3a8a !important;
+}
+
+.el-message .el-message__icon {
+  margin-right: 0 !important;
+  font-size: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Success: Emerald with soft glass */
+.el-message--success {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(167, 243, 208, 0.8) !important;
+}
+.el-message--success .el-message__icon {
+  color: #10b981 !important;
+}
+.el-message--success .el-message__content {
+  color: #0f172a !important;
+}
+
+/* Error: Crimson */
+.el-message--error {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(254, 202, 202, 0.8) !important;
+}
+.el-message--error .el-message__icon {
+  color: #ef4444 !important;
+}
+.el-message--error .el-message__content {
+  color: #991b1b !important;
+}
+
+/* Warning: Amber */
+.el-message--warning {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(253, 230, 138, 0.8) !important;
+}
+.el-message--warning .el-message__icon {
+  color: #f59e0b !important;
+}
+.el-message--warning .el-message__content {
+  color: #92400e !important;
+}
+
+/* Info: Sky */
+.el-message--info {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border-color: rgba(186, 230, 253, 0.8) !important;
+}
+.el-message--info .el-message__icon {
+  color: #0284c7 !important;
+}
+.el-message--info .el-message__content {
+  color: #0f172a !important;
+}
+
+/* Close button on toast */
+.el-message .el-message__closeBtn {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  margin-left: 6px !important;
+  border-radius: 9999px !important;
+  transition: all 0.15s ease !important;
+}
+.el-message .el-message__closeBtn:hover {
+  color: #334155 !important;
+}
+
+/* Badge counter on duplicate toasts */
+.el-message .el-badge__content {
+  background-color: #3b82f6 !important;
+  border-radius: 9999px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  height: 16px !important;
+  line-height: 16px !important;
+  padding: 0 5px !important;
+}
+
+/* ==========================================================================
+   Element Plus Button Theme Overrides (Enterprise Royal Blue)
+   ========================================================================== */
+.el-button {
+  font-family: inherit !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+  transition: all 0.15s ease !important;
+}
+
+/* Solid primary button */
+.el-button--primary:not(.is-link):not(.is-text) {
+  --el-button-bg-color: #2563eb !important;
+  --el-button-border-color: #2563eb !important;
+  --el-button-hover-bg-color: #1d4ed8 !important;
+  --el-button-hover-border-color: #1d4ed8 !important;
+  --el-button-active-bg-color: #1e40af !important;
+  --el-button-active-border-color: #1e40af !important;
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.el-button--primary:not(.is-link):not(.is-text):hover,
+.el-button--primary:not(.is-link):not(.is-text):focus {
+  background-color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+.el-button--primary:not(.is-link):not(.is-text):active {
+  background-color: #1e40af !important;
+  border-color: #1e40af !important;
+}
+
+/* Link / Text primary button */
+.el-button--primary.is-link,
+.el-button--primary.is-text {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #2563eb !important;
+  padding: 0 !important;
+  height: auto !important;
+  font-weight: 500 !important;
+}
+
+.el-button--primary.is-link:hover,
+.el-button--primary.is-text:hover {
+  color: #1d4ed8 !important;
+  text-decoration: underline !important;
+}
+
+.el-button--default {
+  border-color: #e2e8f0 !important;
+  color: #334155 !important;
+  background-color: #ffffff !important;
+}
+
+.el-button--default:hover {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Minimalist Clean Dialog (Linear / Raycast / macOS style) */
+.wenflow-minimal-dialog.el-dialog {
+  border-radius: 16px !important;
+  box-shadow: 0 20px 48px -12px rgba(15, 23, 42, 0.18) !important;
+  border: 1px solid rgba(226, 232, 240, 0.85) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background-color: #ffffff !important;
+}
+
+.wenflow-minimal-dialog .el-dialog__header,
+.wenflow-minimal-dialog .el-dialog__footer {
+  display: none !important;
+}
+
+.wenflow-minimal-dialog .el-dialog__body {
+  padding: 0 !important;
+}
+
+.dialog-confirm-copy {
+  margin: 0;
+  color: #475569;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.custom-dialog-input .el-input__wrapper {
+  border-radius: 7px !important;
+  box-shadow: 0 0 0 1px #e2e8f0 inset !important;
+  padding: 4px 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.custom-dialog-input .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1.5px #3b82f6 inset, 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+}
+
+/* ==========================================================================
+   Code Block Container & Syntax Styling (Modern GitHub Dark)
+   ========================================================================== */
+.code-block-wrapper {
+  margin: 1em 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  background-color: #161b22;
+  border-bottom: 1px solid #30363d;
+  user-select: none;
+}
+
+.code-language {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+
+.code-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #c9d1d9;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.code-copy-btn:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.code-block-wrapper pre {
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  background-color: #0d1117 !important;
+  color: #e6edf3 !important;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace !important;
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+}
+
+.code-block-wrapper pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+}
+
+/* Custom Markdown Inline Code */
+.custom-markdown :not(pre) > code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 12.5px !important;
+  color: #0969da !important;
+  background-color: rgba(175, 184, 193, 0.2) !important;
+  padding: 2px 5px !important;
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+
+/* ==========================================================================
+   Table & Horizontal Divider Styling
+   ========================================================================== */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin: 1em 0;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.custom-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.custom-markdown th {
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-weight: 600;
+  padding: 9px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+.custom-markdown th:last-child {
+  border-right: none;
+}
+
+.custom-markdown td {
+  padding: 9px 14px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f8fafc;
+  font-size: 13.5px;
+}
+
+.custom-markdown td:last-child {
+  border-right: none;
+}
+
+.custom-markdown tr:last-child td {
+  border-bottom: none;
+}
+
+.custom-markdown tr:hover td {
+  background-color: #f8fafc;
+}
+
+.custom-markdown hr {
+  border: none !important;
+  height: 1px !important;
+  background: #e2e8f0 !important;
+  margin: 1.25em 0 !important;
+}
+
+/* ==========================================================================
+   Markdown Typography Fine-Tuning (Compact & Standard 14px Scale)
+   ========================================================================== */
+.custom-markdown {
+  font-size: 14px;
+  line-height: 1.62 !important;
+  color: #1e293b;
+}
+
+.custom-markdown p {
+  margin-bottom: 0.5em !important;
+  line-height: 1.62 !important;
+}
+
+.custom-markdown p:last-child {
+  margin-bottom: 0 !important;
+}
+
+.custom-markdown h1 {
+  font-size: 1.18rem;
+  font-weight: 700;
+  margin-top: 0.75em;
+  margin-bottom: 0.3em;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.custom-markdown h2 {
+  font-size: 1.06rem;
+  font-weight: 700;
+  margin-top: 0.65em;
+  margin-bottom: 0.25em;
+  color: #0f172a;
+  line-height: 1.45;
+}
+
+.custom-markdown h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 0.55em;
+  margin-bottom: 0.2em;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.custom-markdown ul,
+.custom-markdown ol {
+  padding-left: 1.25em;
+  margin: 0.25em 0 0.5em 0 !important;
+}
+
+.custom-markdown li {
+  margin-bottom: 0.18em !important;
+  line-height: 1.6 !important;
+}
+
+.custom-markdown blockquote {
+  border-left: 3px solid #cbd5e1;
+  padding-left: 0.85em;
+  margin: 0.5em 0;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+/* ==========================================================================
+   DeepSeek-R1 思考链排版规范 (11.5px 紧凑微缩、柔和灰阶)
+   ========================================================================== */
+.reasoning-markdown {
+  font-size: 11.5px !important;
+  line-height: 1.6 !important;
+  color: #64748b !important;
+}
+
+.reasoning-markdown p {
+  font-size: 11.5px !important;
+  line-height: 1.6 !important;
+  color: #64748b !important;
+  margin-bottom: 0.45em !important;
+}
+
+.reasoning-markdown p:last-child {
+  margin-bottom: 0 !important;
+}
+
+.reasoning-markdown h1,
+.reasoning-markdown h2,
+.reasoning-markdown h3,
+.reasoning-markdown h4 {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  margin-top: 0.5em !important;
+  margin-bottom: 0.2em !important;
+}
+
+.reasoning-markdown ul,
+.reasoning-markdown ol {
+  font-size: 11.5px !important;
+  color: #64748b !important;
+  padding-left: 1.1em !important;
+  margin: 0.3em 0 !important;
+}
+
+.reasoning-markdown li {
+  margin-bottom: 0.15em !important;
+}
+
+.reasoning-markdown code {
+  font-size: 10.5px !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  padding: 1px 4px !important;
+  border-radius: 3px !important;
+  color: #475569 !important;
+}
+
+.reasoning-markdown pre {
+  font-size: 10.5px !important;
+  padding: 6px 10px !important;
+  margin: 0.4em 0 !important;
+}
+
+/* ==========================================================================
+   Element Plus Popper Reset for WenFlow Model Dropdown
+   ========================================================================== */
+.el-popper.wenflow-model-dropdown-popper {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.el-popper.wenflow-model-dropdown-popper .el-popper__arrow {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Element Plus Dialog Reset for WenFlow Unified Dialogs
+   ========================================================================== */
+.el-dialog.wenflow-unified-dialog {
+  border-radius: 12px !important;
+  padding: 24px !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  overflow: hidden !important;
+}
+
+.el-dialog.wenflow-unified-dialog .el-dialog__header {
+  padding: 0 0 16px 0 !important;
+  margin-right: 0 !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.el-dialog.wenflow-unified-dialog .el-dialog__body {
+  padding: 16px 0 !important;
+}
+
+.el-dialog.wenflow-unified-dialog .el-dialog__footer {
+  padding: 0 !important;
+}
+
+.el-dialog.wenflow-unified-dialog .el-dialog__headerbtn {
+  top: 20px !important;
+  right: 20px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.el-dialog.wenflow-unified-dialog .el-dialog__headerbtn:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* ==========================================================================
+   Element Plus Toast / Message Custom Refinement
+   ========================================================================== */
+.el-message {
+  min-width: 260px !important;
+  max-width: min(92vw, 440px) !important;
+  padding: 12px 18px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 36px -6px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.8) !important;
+  backdrop-filter: blur(16px) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+}
+
+.el-message .el-message__content {
+  font-size: 13px !important;
+  line-height: 1.65 !important;
+  letter-spacing: 0.01em !important;
+  color: #1e293b !important;
+  font-weight: 500 !important;
+}
+
+.el-message .el-message__icon {
+  font-size: 17px !important;
+  margin-right: 10px !important;
+  shrink: 0;
+}
+

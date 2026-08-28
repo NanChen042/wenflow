@@ -1,6 +1,6 @@
 {
-  "name": "vue3demo",
-  "version": "0.0.0",
+  "name": "wenflow-ai",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,11 +15,10 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
     "@tailwindcss/vite": "^4.2.1",
-    "@tsparticles/slim": "^3.8.1",
-    "@tsparticles/vue3": "^3.0.1",
     "axios": "^1.7.9",
     "element-plus": "^2.9.4",
     "highlight.js": "^11.11.1",
+    "katex": "^0.18.4",
     "markdown-it": "^14.1.0",
     "pinia": "^2.3.1",
     "tailwindcss": "^4.2.1",
@@ -27,8 +26,10 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
+    "@lobehub/icons-static-svg": "^1.94.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tsconfig/node22": "^22.0.0",
+    "@types/katex": "^0.16.8",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.10.7",
     "@vitejs/plugin-vue": "^5.2.1",

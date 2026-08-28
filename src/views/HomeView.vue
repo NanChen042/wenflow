@@ -1,413 +1,515 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from "vue";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { useChatStore, MessageAsset } from "@/stores/chat";
-import { ModelType, isVLMModel } from "@/services/aiService";
-import { imageService } from "@/services/imageService";
+import { useChatStore } from "@/stores/chat";
+import { ModelType } from "@/services/aiService";
 import { 
-  Position, Cpu, Brush, ChatDotRound, ArrowDown, 
-  Plus, Close, MagicStick, Warning, Right 
+  Setting, Plus, Clock, Compass, Tickets, Delete, EditPen, Check, Close, ChatDotRound, Search, Fold, Expand
 } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
-import deepseekLogo from "@/assets/deepseeklogo.svg";
-
-const bgCanvas = ref<HTMLCanvasElement | null>(null);
-const containerRef = ref<HTMLDivElement | null>(null);
-let animationFrameId: number;
-let mouse = { x: -1000, y: -1000 };
+import wenflowLogo from "@/assets/images/wenflow.png";
+import ModelSquareModal from "@/components/models/ModelSquareModal.vue";
+import SettingsModal from "@/components/common/SettingsModal.vue";
+import ChatInput from "@/components/chat/ChatInput.vue";
+import { ElMessageBox } from "element-plus";
+import { toast } from "@/utils/toast";
 
 const router = useRouter();
 const chatStore = useChatStore();
-const userInput = ref("");
-const isActivating = ref(false); 
+const chatInputRef = ref<InstanceType<typeof ChatInput> | null>(null);
+const modelSquareRef = ref<InstanceType<typeof ModelSquareModal> | null>(null);
 
-const selectedModel = ref<ModelType>(ModelType.V3);
-const assets = ref<MessageAsset[]>([]);
-const fileInput = ref<HTMLInputElement | null>(null);
+// Sidebar Expand / Collapse State (Default: true on desktop, persisted in localStorage)
+const isSidebarExpanded = ref(
+  localStorage.getItem('wenflow_home_sidebar_expanded') !== null
+    ? localStorage.getItem('wenflow_home_sidebar_expanded') === 'true'
+    : true
+);
 
-const modelList = [
-  { label: 'DeepSeek-V3', value: ModelType.V3, desc: '通用智能，适合日常对话' },
-  { label: 'R1-Distill-Qwen-7B', value: ModelType.R1_Distill_7B, desc: '轻量级高效推理模型 (免费)' },
-  { label: 'R1-0528-Qwen3-8B', value: ModelType.R1_Distill_8B, desc: '基于Qwen3的深度思考提炼版 (免费)' },
-  { label: 'DeepSeek-OCR', value: ModelType.OCR, desc: '超强文档识别与提取' },
-  { label: 'Qwen-Omni', value: ModelType.QwenOmni, desc: '音视频图文全模态理解' },
-  { label: 'Qwen-VL', value: ModelType.QwenVL, desc: '专业视觉分析与理解' },
-  { label: 'Qwen-3.5-4B', value: ModelType.Qwen35_4B, desc: '小而强大的全能推理' },
-  { label: 'AI 艺术创作', value: ModelType.ART, desc: 'Kolors 艺术生图引擎' },
-]
+const toggleSidebar = () => {
+  isSidebarExpanded.value = !isSidebarExpanded.value;
+  localStorage.setItem('wenflow_home_sidebar_expanded', String(isSidebarExpanded.value));
+};
 
-const modelLabel = computed(() => {
-  const model = modelList.find(m => m.value === selectedModel.value)
-  return model ? model.label : '解析中...'
-})
+// Modals State
+const showSettingsDialog = ref(false);
+const showHistoryDrawer = ref(false);
 
-const isVLM = computed(() => isVLMModel(selectedModel.value))
+// History Editing State
+const editingSessionId = ref<string | null>(null);
+const editTitleText = ref("");
 
-const handleModelChange = (model: ModelType) => {
-  selectedModel.value = model
-}
+const startEditing = (id: string, currentTitle: string) => {
+  editingSessionId.value = id;
+  editTitleText.value = currentTitle;
+};
 
-const triggerUpload = () => {
-  fileInput.value?.click()
-}
-
-const onFileChange = async (e: Event) => {
-  const files = (e.target as HTMLInputElement).files
-  if (!files) return
-
-  for (const file of Array.from(files)) {
-    const isImage = file.type.startsWith('image/')
-    const isPdf = file.type === 'application/pdf'
-    
-    if (!isImage && !isPdf) {
-      ElMessage.warning(`受限格式: ${file.name}`)
-      continue
+const saveEditing = (id: string) => {
+  if (editingSessionId.value === id) {
+    if (editTitleText.value.trim()) {
+      chatStore.renameSession(id, editTitleText.value.trim());
     }
-
-    try {
-      const base64 = await imageService.fileToBase64(file)
-      assets.value.push({
-        type: isImage ? 'image' : 'pdf',
-        url: base64,
-        name: file.name
-      })
-    } catch (err) {
-      ElMessage.error('上传失败')
-    }
+    editingSessionId.value = null;
   }
-}
+};
 
-const removeAsset = (idx: number) => {
-  assets.value.splice(idx, 1)
-}
+const cancelEditing = () => {
+  editingSessionId.value = null;
+};
 
-const switchToOCR = () => {
-  selectedModel.value = ModelType.OCR
-}
+const deleteSession = (id: string, e: Event) => {
+  e.stopPropagation();
+  const targetSession = chatStore.sessions.find(s => s.id === id);
+  const hasMessages = targetSession && targetSession.messages && targetSession.messages.length > 0 && targetSession.messages.some(m => m.role === 'user' && m.content && m.content.trim().length > 0);
 
-const startChat = async () => {
-  if (!userInput.value.trim() && assets.value.length === 0) return;
-  
-  isActivating.value = true;
-  
-  chatStore.switchModel(selectedModel.value);
+  // 如果会话中没有提问或内容为空，直接快捷删除，无需二次弹窗
+  if (!hasMessages) {
+    chatStore.deleteSession(id);
+    toast.success('会话已删除');
+    return;
+  }
+
+  ElMessageBox.confirm(
+    `确定要删除会话「${targetSession?.title || '此会话'}」吗？删除后该对话的历史记录将无法恢复。`,
+    '删除会话确认',
+    {
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+      confirmButtonClass: 'el-button--danger',
+      autofocus: false
+    }
+  ).then(() => {
+    chatStore.deleteSession(id);
+    toast.success('会话已删除');
+  }).catch(() => {});
+};
+
+const selectSession = (id: string) => {
+  chatStore.switchSession(id);
+  showHistoryDrawer.value = false;
+  router.push('/chat');
+};
+
+const handleNewChat = () => {
+  chatStore.createSession();
+  router.push('/chat');
+};
+
+const openModelSquare = () => {
+  modelSquareRef.value?.open();
+};
+
+const openBatchDrawer = () => {
+  batchDrawerRef.value?.open();
+};
+
+const handleSquareSelect = (modelId: string) => {
+  chatStore.switchModel(modelId as ModelType);
+};
+
+const openSettings = () => {
+  showSettingsDialog.value = true;
+};
+
+const handleHomeSend = (text: string, mode: 'chat' | 'image' = 'chat', options: any = {}) => {
+  const currentModel = chatStore.currentModel || ModelType.R1_Distill_7B;
+  if (options.assets && options.assets.length > 0) {
+    chatStore.setPendingAssets(options.assets);
+  }
   
   router.push({
     path: "/chat",
     query: {
-      q: userInput.value,
-      model: selectedModel.value,
-      mode: selectedModel.value === ModelType.ART ? 'image' : 'chat'
+      q: text,
+      model: currentModel,
+      mode: mode
     }
   });
-
-  (chatStore as any)._pendingAssets = [...assets.value];
 };
 
-const handleKeyDown = (e: KeyboardEvent) => {
-  // If user presses Enter without Shift, Meta, or Ctrl -> Send
-  if (e.key === 'Enter' && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-    e.preventDefault();
-    if (!isActivating.value && (userInput.value.trim() || assets.value.length > 0)) {
-      startChat();
-    }
-  }
-  // If user presses Cmd+Enter or Ctrl+Enter -> New Line
-  // Note: standard textarea handles Shift+Enter natively, so we only need to manually insert for Cmd/Ctrl+Enter
-  else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-    e.preventDefault();
-    userInput.value += '\n';
-  }
+const handleModelChange = (model: ModelType) => {
+  chatStore.switchModel(model);
 };
 
-// Configuration for Neural Background
-const color = "#3b82f6"; // Primary Blue
-const trailOpacity = 0.18;
-const particleCount = 700;
-const speed = 0.85;
-const COLORS = ["#3b82f6", "#60a5fa", "#2563eb", "#1d4ed8"]; // Blue palette
+// Quick Inspiration Suggestions (Perplexity style prompt chips)
+const quickPrompts = [
+  { icon: '💡', label: '深度推理', text: '请帮我深度分析一下 2026 年大语言模型与多模态智能体的发展趋势与技术瓶颈' },
+  { icon: '💻', label: '代码架构', text: '用 TypeScript 和 Vue 3 设计一个具备撤销重做（Undo/Redo）功能的高性能画布状态管理器' },
+  { icon: '✍️', label: '专业写作', text: '为一款主打极简效率与多模型聚合的 AI 开发者工作台撰写一份吸引人的产品发布文案' },
+  { icon: '📊', label: '商业调研', text: '对比分析目前主流开源大模型（DeepSeek-V3/R1、Qwen2.5、Llama 3.3）在代码与数学推理上的优缺点' }
+];
 
-// 打字机逻辑
-const fullTitle = "今天想尝试点什么？";
-const displayTitle = ref("");
-const showCursor = ref(true);
-
-const startTypewriter = () => {
-  let i = 0;
-  const timer = setInterval(() => {
-    if (i < fullTitle.length) {
-      displayTitle.value += fullTitle.charAt(i);
-      i++;
-    } else {
-      clearInterval(timer);
-    }
-  }, 100);
+const applyQuickPrompt = (text: string) => {
+  handleHomeSend(text, 'chat');
 };
-
-// Particle Class
-class Particle {
-  x: number = 0; y: number = 0; vx: number = 0; vy: number = 0; age: number = 0; life: number = 0; width: number; height: number;
-  constructor(w: number, h: number) { this.width = w; this.height = h; this.reset(); }
-  update(w: number, h: number, mouseX: number, mouseY: number) {
-    this.width = w; this.height = h;
-    const angle = (Math.cos(this.x * 0.005) + Math.sin(this.y * 0.005)) * Math.PI;
-    this.vx += Math.cos(angle) * 0.2 * speed;
-    this.vy += Math.sin(angle) * 0.2 * speed;
-    const dx = mouseX - this.x; const dy = mouseY - this.y; const distance = Math.sqrt(dx * dx + dy * dy);
-    const interactionRadius = 150;
-    if (distance < interactionRadius) {
-      const force = (interactionRadius - distance) / interactionRadius;
-      this.vx -= dx * force * 0.05; this.vy -= dy * force * 0.05;
-    }
-    this.x += this.vx; this.y += this.vy; this.vx *= 0.95; this.vy *= 0.95;
-    this.age++; if (this.age > this.life) this.reset();
-    if (this.x < 0) this.x = this.width; if (this.x > this.width) this.x = 0;
-    if (this.y < 0) this.y = this.height; if (this.y > this.height) this.y = 0;
-  }
-  reset() { this.x = Math.random() * this.width; this.y = Math.random() * this.height; this.vx = 0; this.vy = 0; this.age = 0; this.life = Math.random() * 200 + 100; }
-  draw(ctx: CanvasRenderingContext2D) {
-    const pColor = COLORS[Math.floor((this.x + this.y) % COLORS.length)];
-    ctx.fillStyle = pColor; 
-    const alpha = 1 - Math.abs((this.age / this.life) - 0.5) * 2;
-    ctx.globalAlpha = alpha * 0.6; 
-    ctx.fillRect(this.x, this.y, 1.2, 1.2);
-  }
-}
-
-onMounted(() => {
-  startTypewriter();
-  const canvas = bgCanvas.value; const container = containerRef.value;
-  if (!canvas || !container) return;
-  const ctx = canvas.getContext("2d"); if (!ctx) return;
-  let width = container.clientWidth; let height = container.clientHeight; let particles: Particle[] = [];
-  const init = () => {
-    const dpr = window.devicePixelRatio || 1; canvas.width = width * dpr; canvas.height = height * dpr;
-    ctx.scale(dpr, dpr); canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
-    particles = []; for (let i = 0; i < particleCount; i++) particles.push(new Particle(width, height));
-  };
-  const animate = () => {
-    ctx.globalAlpha = 1; ctx.fillStyle = `rgba(255, 255, 255, ${trailOpacity})`; ctx.fillRect(0, 0, width, height);
-    particles.forEach((p) => { p.update(width, height, mouse.x, mouse.y); p.draw(ctx); });
-    animationFrameId = requestAnimationFrame(animate);
-  };
-  const handleResize = () => { if (!container) return; width = container.clientWidth; height = container.clientHeight; init(); };
-  const handleMouseMove = (e: MouseEvent) => { const rect = canvas.getBoundingClientRect(); mouse.x = e.clientX - rect.left; mouse.y = e.clientY - rect.top; };
-  const handleMouseLeave = () => { mouse.x = -1000; mouse.y = -1000; };
-  window.addEventListener("resize", handleResize); container.addEventListener("mousemove", handleMouseMove); container.addEventListener("mouseleave", handleMouseLeave);
-  init(); animate();
-  onUnmounted(() => {
-    window.removeEventListener("resize", handleResize); container.removeEventListener("mousemove", handleMouseMove); container.removeEventListener("mouseleave", handleMouseLeave);
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
-  });
-});
 </script>
 
 <template>
-  <div ref="containerRef" class="relative min-h-screen bg-white flex flex-col items-center justify-center px-6 overflow-hidden">
-    <!-- Neural Background -->
-    <div class="absolute inset-0 pointer-events-none bg-slate-50/50">
-      <canvas ref="bgCanvas" class="absolute inset-0 w-full h-full opacity-40 mix-blend-multiply"></canvas>
-      <div class="absolute inset-0 bg-noise pointer-events-none opacity-[0.02]"></div>
-      <div class="absolute inset-0 bg-gradient-to-b from-white/95 via-transparent to-white/95"></div>
+  <div class="h-[100dvh] w-full bg-[#f8fbff] flex overflow-hidden select-none font-sans relative">
+    <!-- Ambient Aurora Glow Fluid Mesh -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      <div class="aurora-orb orb-1"></div>
+      <div class="aurora-orb orb-2"></div>
     </div>
 
-    <!-- Content -->
-    <div class="relative z-10 w-full max-w-3xl flex flex-col items-center">
-      <!-- Logo Area -->
-      <div class="flex flex-col items-center mb-0 animate-entry-logo">
-        <div class="w-16 h-16 mb-8 p-4 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 hover:scale-105 transition-all duration-500 cursor-pointer">
-          <img :src="deepseekLogo" alt="Logo" class="w-full h-full object-contain" />
+    <!-- ==================== LEFT EXPANDABLE SIDEBAR (Crisp Modern SaaS Minimalist) ==================== -->
+    <aside 
+      class="h-full bg-white border-r border-slate-200/80 shrink-0 z-20 shadow-2xs backdrop-blur-md transition-[width] duration-300 ease-in-out select-none flex flex-col justify-between overflow-hidden"
+      :class="isSidebarExpanded ? 'w-64 p-3' : 'w-16 p-2'"
+    >
+      <!-- Top Group: Header + New Chat + Navigation Menu + Recent Chats -->
+      <div class="flex flex-col gap-2.5 w-full">
+        <!-- 1. Header (Brand Logo + Title + Top-Right Fold Button) -->
+        <div class="h-9 flex items-center w-full overflow-hidden" :class="isSidebarExpanded ? 'justify-between' : 'justify-center'">
+          <!-- Left: Brand Logo & Title -->
+          <div 
+            class="flex items-center gap-2 cursor-pointer overflow-hidden min-w-0 group"
+            @click="isSidebarExpanded ? router.push('/') : toggleSidebar()"
+          >
+            <el-tooltip :content="isSidebarExpanded ? '点击返回首页' : '展开侧边栏'" placement="right" :show-after="300">
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/80 shadow-2xs shrink-0 group-hover:scale-105 group-hover:bg-blue-100/80 transition-all">
+                <img :src="wenflowLogo" alt="Logo" class="w-5 h-5 object-contain" />
+              </div>
+            </el-tooltip>
+
+            <span 
+              v-if="isSidebarExpanded"
+              class="font-extrabold text-sm text-slate-800 tracking-tight whitespace-nowrap"
+            >
+              问流 AI
+            </span>
+          </div>
+
+          <!-- Right: Top-Right Fold Button (Only shown in expanded state) -->
+          <el-tooltip v-if="isSidebarExpanded" content="收起侧边栏" placement="right" :show-after="300">
+            <button 
+              @click="toggleSidebar"
+              class="w-7 h-7 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            >
+              <el-icon class="text-sm"><Fold /></el-icon>
+            </button>
+          </el-tooltip>
+        </div>
+
+        <!-- 2. Pure Blue High-End New Chat Button -->
+        <el-tooltip :content="isSidebarExpanded ? '' : '开启新对话 (⌘N)'" placement="right" :disabled="isSidebarExpanded" :show-after="300">
+          <button 
+            @click="handleNewChat"
+            class="rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all flex items-center cursor-pointer active:scale-98 overflow-hidden shrink-0"
+            :class="isSidebarExpanded ? 'w-full h-9 justify-between px-3' : 'w-10 h-10 justify-center mx-auto'"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <!-- Ultra-crisp vector plus icon -->
+              <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span v-if="isSidebarExpanded" class="font-bold text-xs text-white tracking-tight whitespace-nowrap">
+                开启新对话
+              </span>
+            </div>
+
+            <!-- Crisp High-End Keycap Badge -->
+            <kbd 
+              v-if="isSidebarExpanded" 
+              class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-white/15 text-white/95 text-[10px] font-mono font-medium border border-white/20 shadow-2xs leading-none select-none"
+            >
+              <svg class="w-2.5 h-2.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+              </svg>
+              <span class="text-[10px] font-bold">N</span>
+            </kbd>
+          </button>
+        </el-tooltip>
+
+        <!-- 3. Navigation Menu List -->
+        <div class="flex flex-col gap-1 w-full pt-1">
+          <!-- 历史会话 -->
+          <el-tooltip :content="isSidebarExpanded ? '' : '历史会话'" placement="right" :disabled="isSidebarExpanded" :show-after="300">
+            <button 
+              @click="showHistoryDrawer = true"
+              class="rounded-xl text-slate-600 hover:text-blue-600 hover:bg-slate-100/80 transition-colors flex items-center cursor-pointer text-xs font-medium overflow-hidden group shrink-0 relative"
+              :class="[
+                showHistoryDrawer ? 'bg-blue-50 text-blue-600 font-semibold' : '',
+                isSidebarExpanded ? 'w-full h-9 px-2.5' : 'w-10 h-10 justify-center mx-auto'
+              ]"
+            >
+              <div class="flex items-center justify-center relative shrink-0">
+                <svg class="w-[19px] h-[19px] text-slate-500 group-hover:text-blue-600 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span v-if="chatStore.sessions.length > 0" class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white"></span>
+              </div>
+              <span v-if="isSidebarExpanded" class="ml-2.5 whitespace-nowrap">
+                历史会话
+              </span>
+              <span 
+                v-if="isSidebarExpanded"
+                class="ml-auto text-[10.5px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-mono font-medium"
+              >
+                {{ chatStore.sessions.length }}
+              </span>
+            </button>
+          </el-tooltip>
+
+          <!-- 模型广场 -->
+          <el-tooltip :content="isSidebarExpanded ? '' : '模型全景广场 (500+)'" placement="right" :disabled="isSidebarExpanded" :show-after="300">
+            <button 
+              @click="openModelSquare"
+              class="rounded-xl text-slate-600 hover:text-blue-600 hover:bg-slate-100/80 transition-colors flex items-center cursor-pointer text-xs font-medium overflow-hidden group shrink-0"
+              :class="isSidebarExpanded ? 'w-full h-9 px-2.5' : 'w-10 h-10 justify-center mx-auto'"
+            >
+              <div class="flex items-center justify-center shrink-0">
+                <svg class="w-[19px] h-[19px] text-slate-500 group-hover:text-blue-600 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                </svg>
+              </div>
+              <span v-if="isSidebarExpanded" class="ml-2.5 whitespace-nowrap">
+                模型全景广场
+              </span>
+              <span 
+                v-if="isSidebarExpanded"
+                class="ml-auto text-[9.5px] px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-600 font-bold border border-indigo-100"
+              >
+                500+
+              </span>
+            </button>
+          </el-tooltip>
+
+          <!-- 工作台配置 -->
+          <el-tooltip :content="isSidebarExpanded ? '' : '工作台与 API 设置'" placement="right" :disabled="isSidebarExpanded" :show-after="300">
+            <button 
+              @click="openSettings"
+              class="rounded-xl text-slate-600 hover:text-blue-600 hover:bg-slate-100/80 transition-colors flex items-center cursor-pointer text-xs font-medium overflow-hidden group shrink-0"
+              :class="isSidebarExpanded ? 'w-full h-9 px-2.5' : 'w-10 h-10 justify-center mx-auto'"
+            >
+              <div class="flex items-center justify-center shrink-0">
+                <svg class="w-[19px] h-[19px] text-slate-500 group-hover:text-blue-600 transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </div>
+              <span v-if="isSidebarExpanded" class="ml-2.5 whitespace-nowrap">
+                工作台配置
+              </span>
+            </button>
+          </el-tooltip>
+        </div>
+
+        <!-- 4. Recent Chats (Only when expanded) -->
+        <div 
+          v-if="isSidebarExpanded && chatStore.sessions.length > 0" 
+          class="pt-2 border-t border-slate-100 overflow-hidden"
+        >
+          <div class="px-2 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
+            最近对话
+          </div>
+          <div class="space-y-0.5 overflow-y-auto custom-scrollbar max-h-40 px-0.5">
+            <div 
+              v-for="s in chatStore.sessions.slice(0, 5)" 
+              :key="s.id"
+              @click="selectSession(s.id)"
+              class="group flex items-center gap-2 px-2 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100/80 hover:text-blue-600 text-xs truncate cursor-pointer transition-colors whitespace-nowrap"
+            >
+              <el-icon class="text-slate-400 text-xs shrink-0"><ChatDotRound /></el-icon>
+              <span class="truncate">{{ s.title || '新会话' }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Title & Slogan -->
-      <div class="mb-14 text-center animate-in fade-in slide-in-from-top-10 duration-1000">
-        <h1 class="text-4xl md:text-6xl font-black text-slate-900 tracking-tight mb-4">
-          {{ displayTitle }}<span v-if="showCursor" class="inline-block w-1.5 h-10 md:h-14 bg-blue-600 ml-1 animate-pulse"></span>
-        </h1>
-        <p class="text-slate-400 font-medium tracking-wide uppercase text-sm">DeepSeek Pro Multimodal Workspace</p>
+      <!-- Bottom Profile Section -->
+      <div class="w-full pt-2 border-t border-slate-100">
+        <el-tooltip :content="isSidebarExpanded ? '' : '工作台配置与沙箱存储'" placement="right" :disabled="isSidebarExpanded" :show-after="300">
+          <div 
+            class="flex items-center cursor-pointer hover:bg-slate-50 rounded-xl transition-colors overflow-hidden group" 
+            :class="isSidebarExpanded ? 'p-1.5 h-11 w-full' : 'w-10 h-10 justify-center mx-auto'"
+            @click="openSettings"
+          >
+            <div class="w-8 h-8 rounded-full bg-slate-100 border border-slate-200/90 flex items-center justify-center text-xs font-bold text-slate-700 relative shrink-0 shadow-2xs">
+              <span>AI</span>
+              <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+            </div>
+            <div 
+              v-if="isSidebarExpanded"
+              class="ml-2.5 min-w-0"
+            >
+              <div class="text-xs font-bold text-slate-800 whitespace-nowrap truncate leading-tight group-hover:text-blue-600 transition-colors">本地沙箱存储</div>
+              <div class="text-[10px] text-emerald-600 font-medium whitespace-nowrap truncate leading-tight">密钥安全隔离</div>
+            </div>
+            <el-icon 
+              v-if="isSidebarExpanded"
+              class="text-slate-400 group-hover:text-blue-600 text-xs shrink-0 ml-auto mr-1 transition-colors"
+            >
+              <Setting />
+            </el-icon>
+          </div>
+        </el-tooltip>
+      </div>
+    </aside>
+
+    <!-- ==================== MAIN CENTER WORKSPACE ==================== -->
+    <main class="flex-1 h-full flex flex-col justify-between items-center px-4 sm:px-8 relative z-10 overflow-y-auto custom-scrollbar">
+      <!-- Top Subtle Space -->
+      <div class="w-full h-4 sm:h-8 shrink-0"></div>
+
+      <!-- Center Hero Section (Original Title & Input) -->
+      <div class="flex-1 flex flex-col items-center justify-center max-w-3xl w-full mx-auto px-4 my-auto">
+        <div class="home-hero text-center mb-6">
+          <p class="home-kicker">WENFLOW · 问流 AI 智能工作台</p>
+          <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">思绪如流，问答无界</h1>
+          <p class="home-subtitle text-xs sm:text-sm text-slate-500 mt-2">汇聚前沿智能模型，让每一次深度探索与灵感创作，都如心流般自然流淌。</p>
+        </div>
+
+        <!-- Unified Shared High-End Input Box -->
+        <div class="home-composer w-full">
+          <ChatInput 
+            ref="chatInputRef"
+            :is-hero="true"
+            dropdown-placement="bottom-start"
+            @send="handleHomeSend"
+            @model-change="handleModelChange"
+            @open-model-square="openModelSquare"
+          />
+        </div>
       </div>
 
-      <!-- Input Section: Premium Pillar -->
-      <div class="max-w-3xl mx-auto w-full group relative mb-8">
-        
-        <div class="relative bg-white/80 backdrop-blur-2xl rounded-[32px] p-3 border-2 border-slate-100 shadow-[0_32px_64px_-16px_rgba(37,99,235,0.12)] transition-all duration-500 group-hover:border-blue-200 group-focus-within:border-blue-500 group-focus-within:ring-8 group-focus-within:ring-blue-500/5 flex flex-col min-h-[160px]">
-          
-          <!-- Massive Textarea -->
-          <div class="p-2 flex-grow">
-            <textarea 
-              v-model="userInput" 
-              placeholder="今天想尝试点什么？上传文档分析，或是随时开始对话..." 
-              class="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none px-2 pt-2 pb-0 text-xl md:text-2xl font-medium text-slate-800 placeholder:text-slate-300 min-h-[80px]"
-              @keydown="handleKeyDown"
-            ></textarea>
-          </div>
+      <!-- Bottom Minimal Footer -->
+      <footer class="w-full py-3 text-center text-[11px] text-slate-400 shrink-0">
+        问流 AI (WenFlow) · 聚合多平台模型服务 · 内容由 AI 生成仅供参考 · 密钥保存在本地浏览器
+      </footer>
+    </main>
 
-          <!-- Asset Previews on Home -->
-          <div v-if="assets.length > 0" class="px-4 pb-2 flex flex-wrap gap-3">
-            <div v-for="(asset, idx) in assets" :key="idx" class="relative group/home-asset w-16 h-16 rounded-xl overflow-hidden border border-slate-100 shadow-sm animate-in zoom-in-50 duration-300">
-              <img :src="asset.url" class="w-full h-full object-cover" />
-              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/home-asset:opacity-100 transition-opacity flex items-center justify-center">
-                <button @click="removeAsset(idx)" class="text-white hover:text-red-400"><el-icon><Close /></el-icon></button>
+    <!-- ==================== HISTORY DRAWER (Slide-over) ==================== -->
+    <el-drawer
+      v-model="showHistoryDrawer"
+      title="历史对话会话"
+      size="320px"
+      direction="ltr"
+      class="history-slide-drawer"
+    >
+      <template #header>
+        <div class="flex items-center justify-between pr-2">
+          <div class="flex items-center gap-2">
+            <el-icon class="text-blue-600 text-base"><Clock /></el-icon>
+            <span class="font-bold text-sm text-slate-800">历史会话 ({{ chatStore.sessions.length }})</span>
+          </div>
+          <button 
+            @click="handleNewChat" 
+            class="px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <el-icon><Plus /></el-icon>
+            <span>新建</span>
+          </button>
+        </div>
+      </template>
+
+      <div class="h-full flex flex-col -mt-3">
+        <div v-if="chatStore.sessions.length === 0" class="flex-1 flex flex-col items-center justify-center text-slate-400 text-xs py-12">
+          <el-icon class="text-3xl mb-2 text-slate-300"><ChatDotRound /></el-icon>
+          <p>暂无历史会话，点击开启新对话</p>
+        </div>
+
+        <div v-else class="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+          <div 
+            v-for="s in chatStore.sessions"
+            :key="s.id"
+            @click="selectSession(s.id)"
+            class="p-2.5 rounded-lg border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all cursor-pointer group flex items-center justify-between gap-2"
+            :class="{ 'bg-blue-50 border-blue-200 text-blue-700': s.id === chatStore.activeSessionId }"
+          >
+            <div class="min-w-0 flex-1">
+              <div v-if="editingSessionId === s.id" class="flex items-center gap-1" @click.stop>
+                <input 
+                  v-model="editTitleText" 
+                  class="w-full text-xs px-1.5 py-0.5 border border-blue-400 rounded bg-white outline-none"
+                  @keydown.enter="saveEditing(s.id)"
+                  @keydown.esc="cancelEditing"
+                  autofocus
+                />
+                <button @click="saveEditing(s.id)" class="text-emerald-600 hover:text-emerald-700 p-0.5"><el-icon><Check /></el-icon></button>
+                <button @click="cancelEditing" class="text-slate-400 hover:text-slate-600 p-0.5"><el-icon><Close /></el-icon></button>
+              </div>
+              <div v-else>
+                <h4 class="text-xs font-semibold text-slate-800 truncate group-hover:text-blue-600">{{ s.title || '新会话' }}</h4>
+                <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                  <span>{{ s.messages.length }} 条对话</span>
+                  <span>·</span>
+                  <span class="truncate">{{ s.model }}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Internal Bottom Toolbar -->
-          <div class="flex items-center justify-between px-2 pb-1 mt-auto">
-            <div class="flex items-center gap-2">
-              <!-- Upload Trigger -->
-              <input type="file" ref="fileInput" class="hidden" multiple @change="onFileChange" />
+            <!-- Action buttons -->
+            <div v-if="editingSessionId !== s.id" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
-                @click="triggerUpload"
-                class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                title="上传附件"
+                @click.stop="startEditing(s.id, s.title)" 
+                class="p-1 rounded hover:bg-white text-slate-400 hover:text-slate-700 transition-colors" 
+                title="重命名"
               >
-                <el-icon class="text-2xl"><Plus /></el-icon>
+                <el-icon class="text-xs"><EditPen /></el-icon>
               </button>
-
-              <!-- Model Pill Switcher Inside -->
-              <el-dropdown trigger="click" @command="handleModelChange" class="home-model-pill-dropdown">
-                <div class="home-model-pill transition-all active:scale-95 shadow-sm shadow-blue-50 hover:border-blue-300 hover:bg-blue-50/50">
-                  <el-icon class="text-blue-500 mr-1.5"><Cpu /></el-icon>
-                  <span class="home-model-name text-[13px] font-bold text-slate-700">{{ modelLabel }}</span>
-                  <el-icon class="ml-1.5 text-[10px] text-slate-400"><ArrowDown /></el-icon>
-                  
-                  <div v-if="selectedModel === ModelType.ART" class="status-dot bg-purple-500 animate-pulse ml-2" title="艺术模式已激活"></div>
-                  <div v-else-if="selectedModel === ModelType.OCR" class="status-dot bg-blue-500 ml-2" title="OCR 模式已激活"></div>
-                </div>
-
-                <template #dropdown>
-                  <el-dropdown-menu class="premium-model-menu">
-                    <el-dropdown-item v-for="opt in modelList" :key="opt.value" :command="opt.value" :class="{ 'is-active': selectedModel === opt.value }">
-                      <div class="flex items-center gap-3 w-full py-0.5">
-                        <span class="font-bold text-[12.5px] text-slate-700 whitespace-nowrap">{{ opt.label }}</span>
-                        <span class="text-[10px] text-slate-400 truncate opacity-80 mt-0.5 max-w-[150px]">{{ opt.desc }}</span>
-                      </div>
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-
-              <Transition name="slide-fade">
-                <div v-if="assets.length > 0 && !isVLM" class="home-vlm-warning">
-                  <el-icon class="mr-1.5 text-lg"><Warning /></el-icon>
-                  <span class="hidden sm:inline">模型不支持识别</span>
-                  <button @click="switchToOCR" class="home-switch-link ml-1.5">切换 OCR</button>
-                </div>
-              </Transition>
+              <button 
+                @click="deleteSession(s.id, $event)" 
+                class="p-1 rounded hover:bg-white text-slate-400 hover:text-red-600 transition-colors" 
+                title="删除会话"
+              >
+                <el-icon class="text-xs"><Delete /></el-icon>
+              </button>
             </div>
-            
-            <!-- Send Button Inside -->
-            <button 
-              @click="startChat" 
-              :disabled="isActivating || (!userInput.trim() && assets.length === 0)"
-              class="w-12 h-12 bg-blue-600 text-white rounded-[20px] flex items-center justify-center shadow-[0_8px_20px_rgba(37,99,235,0.3)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shrink-0 ml-4"
-            >
-              <el-icon v-if="isActivating" class="animate-spin text-2xl"><Loading /></el-icon>
-              <el-icon v-else class="text-xl -ml-0.5"><Position /></el-icon>
-            </button>
           </div>
         </div>
       </div>
-    </div>
+    </el-drawer>
+
+    <!-- 统一设置弹窗 (Reusable Modal) -->
+    <SettingsModal v-model="showSettingsDialog" />
+
+    <!-- 官方全屏模型广场 -->
+    <ModelSquareModal ref="modelSquareRef" @select="handleSquareSelect" />
   </div>
 </template>
 
 <style scoped>
-textarea { scrollbar-width: none; }
-textarea::-webkit-scrollbar { display: none; }
-
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-.animate-blink { animation: blink 1s step-end infinite; }
-
-.bg-noise {
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  mix-blend-mode: overlay;
-}
-
-@keyframes entry-logo { from { opacity: 0; transform: translateY(20px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes entry-input { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes entry-footer { from { opacity: 0; } to { opacity: 1; } }
-
-.animate-entry-logo { animation: entry-logo 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.animate-entry-input { animation: entry-input 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s both; }
-.animate-entry-footer { animation: entry-footer 1s ease-out 1.2s both; }
-
-.fade-enter-active, .fade-leave-active { transition: all 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(5px); }
-
-.hero-input :deep(.el-input__wrapper) {
-  background: transparent !important;
-  box-shadow: none !important;
-  font-size: 18px;
-  font-weight: 500;
-  color: #1e293b;
-  padding: 0 12px;
-}
-
-.home-model-pill {
-  display: flex;
-  align-items: center;
-  padding: 8px 16px;
-  background: white;
-  border: 1px solid #f1f5f9;
-  border-radius: 16px;
-  cursor: pointer;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
+/* ==================== Ambient Aurora Glow ==================== */
+.aurora-orb {
+  position: absolute;
   border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.22;
+  will-change: transform;
+  pointer-events: none;
 }
 
-.home-vlm-warning {
-  display: flex;
-  align-items: center;
-  padding: 6px 14px;
-  background: #fffafa;
-  border: 1px solid #fee2e2;
-  border-radius: 14px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #ef4444;
+.orb-1 {
+  width: min(500px, 80vw);
+  height: min(500px, 80vw);
+  background: radial-gradient(circle, #3b82f6 0%, rgba(59, 130, 246, 0.4) 60%, transparent 80%);
+  top: 15%;
+  left: 20%;
+  animation: float-orb-1 24s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
 }
 
-.home-switch-link {
-  background: #ef4444;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 6px;
+.orb-2 {
+  width: min(460px, 75vw);
+  height: min(460px, 75vw);
+  background: radial-gradient(circle, #6366f1 0%, rgba(99, 102, 241, 0.35) 60%, transparent 80%);
+  bottom: 20%;
+  right: 15%;
+  animation: float-orb-2 28s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
 }
 
-.premium-model-menu {
-  border-radius: 16px !important;
-  padding: 4px !important;
+@keyframes float-orb-1 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(50px, -30px, 0) scale(1.1); }
+  100% { transform: translate3d(-30px, 40px, 0) scale(0.95); }
 }
 
-:deep(.premium-model-menu .el-dropdown-menu__item) {
-  padding: 5px 12px !important;
-  border-radius: 10px !important;
-  margin-bottom: 2px;
-}
-:deep(.premium-model-menu .el-dropdown-menu__item:last-child) {
-  margin-bottom: 0;
-}
-:deep(.premium-model-menu .el-dropdown-menu__item.is-active) {
-  background-color: #eff6ff !important;
-  color: #2563eb !important;
-}
-
-.slide-fade-enter-active {
-  transition: all 0.3s ease-out;
-}
-.slide-fade-leave-active {
-  transition: all 0.2s cubic-bezier(1, 0.5, 0.8, 1);
-}
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  transform: translateX(10px);
-  opacity: 0;
+@keyframes float-orb-2 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-40px, 30px, 0) scale(1.06); }
+  100% { transform: translate3d(30px, -20px, 0) scale(0.94); }
 }
 </style>

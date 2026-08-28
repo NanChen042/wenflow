@@ -26,7 +26,7 @@ const router = useRouter();
 <style scoped>
 /* Simplified global styles for Zero-Nav overhaul */
 :deep(.premium-nav-dropdown) {
-  border-radius: 20px !important;
+  border-radius: 10px !important;
   padding: 8px !important;
   border: 1px solid rgba(226, 232, 240, 0.8) !important;
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1) !important;
@@ -34,7 +34,7 @@ const router = useRouter();
 }
 
 :deep(.el-dropdown-menu__item) {
-  border-radius: 12px !important;
+  border-radius: 6px !important;
   margin: 2px 0 !important;
   padding: 10px 16px !important;
   transition: all 0.2s ease !important;

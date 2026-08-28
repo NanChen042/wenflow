@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import { setSiliconFlowKey as setChatKey } from '@/services/aiService'
+import { 
+  setSiliconFlowKey as setChatKey, 
+  setDeepSeekKey as setChatDeepSeekKey,
+  setOpenRouterKey as setChatOpenRouterKey
+} from '@/services/aiService'
 import { setSiliconFlowKey as setImageKey } from '@/services/imageService'
 
 const STORAGE_KEY = 'deepseek_app_config'
@@ -8,6 +12,7 @@ const STORAGE_KEY = 'deepseek_app_config'
 export interface AppConfig {
   deepseekApiKey: string
   siliconFlowApiKey: string
+  openrouterApiKey: string
   defaultModel: string
 }
 
@@ -16,7 +21,8 @@ export const useConfigStore = defineStore('config', () => {
     const defaultConfig: AppConfig = {
       deepseekApiKey: import.meta.env.VITE_DEEPSEEK_API_KEY || '',
       siliconFlowApiKey: import.meta.env.VITE_SILICONFLOW_API_KEY || '',
-      defaultModel: 'deepseek-chat'
+      openrouterApiKey: import.meta.env.VITE_OPENROUTER_API_KEY || '',
+      defaultModel: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-7B' // 默认首选免费高品质模型
     }
 
     try {
@@ -32,33 +38,46 @@ export const useConfigStore = defineStore('config', () => {
 
   const config = ref<AppConfig>(loadConfig())
 
-  // 初始化时同步到服务 (关键修复：均使用 siliconFlowApiKey)
+  // 初始化时同步到服务
   setChatKey(config.value.siliconFlowApiKey)
+  setChatDeepSeekKey(config.value.deepseekApiKey)
+  setChatOpenRouterKey(config.value.openrouterApiKey)
   setImageKey(config.value.siliconFlowApiKey)
 
-  // 监听 SiliconFlow Key 变化并同步到两个服务
-  watch(() => config.value.siliconFlowApiKey, (newKey) => {
-    setChatKey(newKey)
-    setImageKey(newKey)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config.value))
-  })
-
-  // DeepSeek Key 仅保留存储，不用于主要服务
-  watch(() => config.value.deepseekApiKey, () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config.value))
-  })
+  // 监听配置变化并自动持久化
+  watch(config, (newConfig) => {
+    setChatKey(newConfig.siliconFlowApiKey)
+    setChatDeepSeekKey(newConfig.deepseekApiKey)
+    setChatOpenRouterKey(newConfig.openrouterApiKey)
+    setImageKey(newConfig.siliconFlowApiKey)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig))
+  }, { deep: true })
 
   const setDeepSeekKeyInStore = (key: string) => {
     config.value.deepseekApiKey = key
+    setChatDeepSeekKey(key)
   }
 
   const setSiliconFlowKeyInStore = (key: string) => {
     config.value.siliconFlowApiKey = key
+    setChatKey(key)
+    setImageKey(key)
+  }
+
+  const setOpenRouterKeyInStore = (key: string) => {
+    config.value.openrouterApiKey = key
+    setChatOpenRouterKey(key)
+  }
+
+  const setDefaultModelInStore = (model: string) => {
+    config.value.defaultModel = model
   }
 
   return {
     config,
     setDeepSeekKey: setDeepSeekKeyInStore,
-    setSiliconFlowKey: setSiliconFlowKeyInStore
+    setSiliconFlowKey: setSiliconFlowKeyInStore,
+    setOpenRouterKey: setOpenRouterKeyInStore,
+    setDefaultModel: setDefaultModelInStore
   }
 })

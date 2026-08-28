@@ -1,6 +1,3 @@
-import axios from 'axios'
-import { ElMessage } from 'element-plus'
-
 // API 配置
 const API_CONFIG = {
   // 开发环境使用 Vite 代理 /api-v1，生产环境直接请求官方接口
@@ -30,6 +27,7 @@ export enum ImageSize {
 }
 
 export interface ImageGenerationParams {
+  model?: string;
   prompt: string;
   negative_prompt?: string;
   image_size: ImageSize | string;
@@ -38,6 +36,7 @@ export interface ImageGenerationParams {
   guidance_scale: number;
   seed?: number;
   image?: string;
+  signal?: AbortSignal;
 }
 
 export interface ImageGenerationResponse {
@@ -83,13 +82,11 @@ class ImageGenerationService {
   async generateImage(params: ImageGenerationParams): Promise<ImageGenerationResponse> {
     try {
       const requestBody: any = {
-        model: 'Kwai-Kolors/Kolors',
+        model: params.model || 'Kwai-Kolors/Kolors',
         prompt: params.prompt,
         image_size: params.image_size,
-        size: params.image_size, // 兼容某些参数名称
         batch_size: parseInt(params.batch_size as any) || 1,
         num_inference_steps: parseInt(params.num_inference_steps as any) || 20,
-        step: parseInt(params.num_inference_steps as any) || 20, // 兼容某些参数名称
         guidance_scale: parseFloat(params.guidance_scale as any) || 7.5
       }
 
@@ -122,7 +119,8 @@ class ImageGenerationService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${API_CONFIG.apiKey.trim()}`
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: params.signal
       });
 
       const data = await response.json();
