@@ -187,10 +187,10 @@ const handleTitleMouseLeave = (e: MouseEvent) => {
           class="flex items-center gap-2 text-slate-800 hover:text-blue-600 transition-all cursor-pointer group rounded-lg text-left"
           title="点击返回首页"
         >
-          <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/80 shadow-2xs shrink-0 group-hover:scale-105 group-hover:bg-blue-100/80 transition-all">
-            <img :src="wenflowLogo" class="w-5 h-5 object-contain" alt="Logo" />
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-50 to-indigo-50 flex items-center justify-center border border-indigo-100/80 shadow-2xs shrink-0 group-hover:scale-105 transition-all">
+            <img :src="wenflowLogo" class="w-6 h-6 object-contain" alt="Logo" />
           </div>
-          <span class="font-extrabold text-sm tracking-tight text-slate-800 group-hover:text-blue-600 transition-colors">问流 AI</span>
+          <span class="font-extrabold text-sm tracking-tight text-slate-800 group-hover:text-blue-600 transition-colors">问流 Flow</span>
         </button>
 
         <!-- Mobile Close Button -->

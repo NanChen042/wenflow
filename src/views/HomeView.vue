@@ -167,8 +167,8 @@ const applyQuickPrompt = (text: string) => {
             @click="isSidebarExpanded ? router.push('/') : toggleSidebar()"
           >
             <el-tooltip :content="isSidebarExpanded ? '点击返回首页' : '展开侧边栏'" placement="right" :show-after="300">
-              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/80 shadow-2xs shrink-0 group-hover:scale-105 group-hover:bg-blue-100/80 transition-all">
-                <img :src="wenflowLogo" alt="Logo" class="w-5 h-5 object-contain" />
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-50 to-indigo-50 flex items-center justify-center border border-indigo-100/80 shadow-2xs shrink-0 group-hover:scale-105 transition-all">
+                <img :src="wenflowLogo" alt="Logo" class="w-6 h-6 object-contain" />
               </div>
             </el-tooltip>
 
@@ -176,7 +176,7 @@ const applyQuickPrompt = (text: string) => {
               v-if="isSidebarExpanded"
               class="font-extrabold text-sm text-slate-800 tracking-tight whitespace-nowrap"
             >
-              问流 AI
+              问流 Flow
             </span>
           </div>
 
