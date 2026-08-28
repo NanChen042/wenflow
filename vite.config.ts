@@ -5,7 +5,9 @@ import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-const base = process.env.NODE_ENV === 'production' ? '/deepseek/' : '/'
+
+const base = process.env.VITE_BASE_PATH || '/'
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: base,
